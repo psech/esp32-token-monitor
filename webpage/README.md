@@ -1,5 +1,6 @@
 # esp32-token-monitor — webpage
 
+<img width="671" height="353" alt="Screenshot 2026-04-27 at 4 21 24 pm" src="https://github.com/user-attachments/assets/c3c87c13-be55-4014-9c38-58fbbe80423c" /><br />
 Vue 3 + Vite + Tailwind v4 dashboard that mirrors the ESP32 LCD on the desktop. Two progress bars, a radar countdown, and a dark/light theme. Lives at `http://localhost:8080`.
 
 ## Layout
@@ -8,7 +9,7 @@ Vue 3 + Vite + Tailwind v4 dashboard that mirrors the ESP32 LCD on the desktop. 
 ┌──────────────────────────────────────────────┐
 │ ESP32 TOKEN MONITOR                          │
 │                                              │
-│ CURRENT SESSION                          8% │
+│ CURRENT SESSION                          8%  │
 │ ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │
 │ resets at 23:30                              │
 │                                              │
