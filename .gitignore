@@ -1,0 +1,20 @@
+# Service
+service/node_modules/
+service/dist/
+service/.env
+service/.env.*
+!service/.env.example
+service/.secrets/
+service/*.log
+
+# Firmware
+firmware/.pio/
+firmware/.pioenvs/
+firmware/.piolibdeps/
+firmware/include/secrets.h
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
