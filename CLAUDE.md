@@ -1,11 +1,26 @@
 # Repo guide for Claude Code
 
-Two-folder project: a Node service on the laptop and ESP32 firmware that polls it.
+Three-folder project: a Node service on the laptop, ESP32 firmware that polls it, and a Vue webpage that mirrors the device.
 
 ```
 service/    Node 24 + Fastify, Dockerised. Reads OAuth token from macOS Keychain, calls api.anthropic.com, exposes /api/usage on port 8787.
 firmware/   PlatformIO project for TTGO T-Display ESP32. Polls the service, renders two progress bars.
+webpage/    Vue 3 + Vite + Tailwind v4 SPA, served by nginx in its own compose stack at localhost:8080. Same /api/usage data as the device.
 ```
+
+## Compose topology
+
+The service and webpage run in **separate `docker compose` stacks** that share an external Docker network:
+
+```
+docker network create esp32-monitor-shared    # one-time
+cd service  && docker compose up -d --build
+cd webpage  && docker compose up -d --build
+```
+
+Both stacks declare the network as `external: true` with name `esp32-monitor-shared`. The webpage's nginx reverse-proxies `/api/*` to the service container by name (`http://monitor:8787/...`). The browser never sees the service origin → no CORS plumbing.
+
+Don't merge the two compose files — the user explicitly wants independent lifecycles. Don't switch to `host.docker.internal` either — the shared-network design is the contract.
 
 ## How the data flows (the non-obvious bit)
 
@@ -89,6 +104,7 @@ When you change code, update the corresponding README in the same change:
 
 - Edits under `service/` → update [service/README.md](service/README.md) (env vars, endpoints, response shape, setup steps).
 - Edits under `firmware/` → update [firmware/README.md](firmware/README.md) (config macros, layout, build/flash flow).
+- Edits under `webpage/` → update [webpage/README.md](webpage/README.md) (env vars, theme, build/run).
 - Architectural changes (data flow, components, scope) → update [README.md](README.md) at the repo root.
 
 A change is incomplete if the README still describes the old behavior. Check both the root and the folder README for stale references before declaring done.

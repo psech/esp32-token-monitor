@@ -4,10 +4,10 @@
 A tiny dedicated dashboard that mirrors Claude Code's `/usage` panel — "Current session" and "Current week (all models)" — on a TTGO T-Display ESP32 sitting next to your laptop.
 
 ```
-┌─────────────────────┐       ┌─────────────────────────┐
-│  TTGO T-Display     │  HTTP │  Node service in Docker │
-│  (Wi-Fi, 240×135)   │  ◄──  │  on the laptop          │
-└─────────────────────┘       └────────────┬────────────┘
+┌─────────────────────┐       ┌─────────────────────────┐       ┌──────────────────┐
+│  TTGO T-Display     │  HTTP │  Node service in Docker │  HTTP │  Vue webpage     │
+│  (Wi-Fi, 240×135)   │  ◄──  │  on the laptop          │  ──►  │  localhost:8080  │
+└─────────────────────┘       └────────────┬────────────┘       └──────────────────┘
                                            │ HTTPS
                                            ▼
                               ┌──────────────────────────┐
@@ -20,19 +20,28 @@ A tiny dedicated dashboard that mirrors Claude Code's `/usage` panel — "Curren
 
 - [service/](service/) — Node 24 + Fastify, Dockerised. Reads the OAuth token from your macOS Keychain (via a helper script), makes a tiny `/v1/messages` call, and exposes `/api/usage` on the LAN.
 - [firmware/](firmware/) — PlatformIO project for the TTGO T-Display. Polls the service, renders two progress bars + a 1 px countdown row.
+- [webpage/](webpage/) — Vue 3 + Vite + Tailwind v4 dashboard at `http://localhost:8080`, mirrors the device with two bars, a radar countdown, and dark/light theme.
 
 See each folder's README for details.
 
 ## Quick start
 
 ```
+# One-time: shared Docker network for service ⇄ webpage
+docker network create esp32-monitor-shared
+
 # Service (laptop)
 cd service
 bin/refresh-token.sh
 docker compose up --build
 
+# Webpage (separate compose, talks to the service over the shared network)
+cd ../webpage
+docker compose up --build
+# open http://localhost:8080
+
 # Firmware (one-time)
-cd firmware
+cd ../firmware
 cp include/secrets.h.example include/secrets.h
 $EDITOR include/secrets.h     # Wi-Fi + laptop IP
 pio run -t upload
@@ -45,6 +54,7 @@ pio device monitor
 - The service caches upstream responses for 60 s, so the ESP32's 10 s polls don't translate to 10 s upstream polls.
 - All Wi-Fi creds and the service host live in `firmware/include/secrets.h` (gitignored). The OAuth credential blob lives in `service/.secrets/credentials.json` (also gitignored).
 - Outbound HTTPS goes through Netskope; the corporate cert bundle is mounted into the Docker container.
+- The webpage and service run as **separate compose stacks** on a manually-created external network (`esp32-monitor-shared`). The webpage's nginx reverse-proxies `/api/*` to the service container by name, so the browser never deals with CORS.
 
 ## Out of scope (v1)
 

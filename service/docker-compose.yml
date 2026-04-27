@@ -16,3 +16,9 @@ services:
     volumes:
       - ./.secrets/credentials.json:/run/secrets/credentials.json:rw
       - /usr/local/share/netskope-cert-bundle.pem:/etc/ssl/certs/netskope-ca.pem:ro
+    networks: [shared]
+
+networks:
+  shared:
+    name: esp32-monitor-shared
+    external: true

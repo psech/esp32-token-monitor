@@ -13,6 +13,11 @@ firmware/.pioenvs/
 firmware/.piolibdeps/
 firmware/include/secrets.h
 
+# Webpage
+webpage/node_modules/
+webpage/dist/
+webpage/*.log
+
 # Editor / OS
 .DS_Store
 .vscode/

@@ -1,0 +1,14 @@
+services:
+  webpage:
+    build: .
+    image: esp32-token-monitor-webpage:latest
+    container_name: esp32-token-monitor-webpage
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    networks: [shared]
+
+networks:
+  shared:
+    name: esp32-monitor-shared
+    external: true
