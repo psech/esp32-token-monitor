@@ -1,5 +1,6 @@
 # ESP32 Claude Code token monitor
 
+<img width="4000" height="2252" alt="20260427_140343" src="https://github.com/user-attachments/assets/8af147ae-20df-44cd-af6a-c796f5717442" /><br />
 A tiny dedicated dashboard that mirrors Claude Code's `/usage` panel — "Current session" and "Current week (all models)" — on a TTGO T-Display ESP32 sitting next to your laptop.
 
 ```
