@@ -27,26 +27,23 @@ See each folder's README for details.
 ## Quick start
 
 ```
-# One-time: shared Docker network for service ⇄ webpage
-docker network create esp32-monitor-shared
-
-# Service (laptop)
-cd service
-bin/refresh-token.sh
-docker compose up --build
-
-# Webpage (separate compose, talks to the service over the shared network)
-cd ../webpage
-docker compose up --build
+# Service + webpage (creates the shared network, refreshes the OAuth token,
+# brings both compose stacks up detached)
+bin/start.sh
 # open http://localhost:8080
 
+# When done, tear both stacks down
+bin/stop.sh
+
 # Firmware (one-time)
-cd ../firmware
+cd firmware
 cp include/secrets.h.example include/secrets.h
 $EDITOR include/secrets.h     # Wi-Fi + laptop IP
 pio run -t upload
 pio device monitor
 ```
+
+Or run each step manually — see [bin/start.sh](bin/start.sh) / [bin/stop.sh](bin/stop.sh) for what they do.
 
 ## Design notes
 
