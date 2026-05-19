@@ -59,7 +59,7 @@ export class UsageFetcher {
       this.cache = { value: fresh, expiresAt: Date.now() + this.cacheTtlMs };
       return fresh;
     } catch (err) {
-      this.log.warn("upstream refresh failed:", (err as Error).message);
+      this.log.warn({ err }, "upstream refresh failed");
       if (this.cache) {
         const stale = { ...this.cache.value, stale: true };
         return stale;
