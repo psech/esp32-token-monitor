@@ -27,8 +27,8 @@ See each folder's README for details.
 ## Quick start
 
 ```
-# Service + webpage (creates the shared network, refreshes the OAuth token,
-# brings both compose stacks up detached)
+# Service + webpage (creates the shared network, extracts the OAuth token
+# from the keychain, brings both compose stacks up detached)
 bin/start.sh
 # open http://localhost:8080
 
@@ -49,7 +49,7 @@ Or run each step manually — see [bin/start.sh](bin/start.sh) / [bin/stop.sh](b
 
 - Rate-limit data lives in **`anthropic-ratelimit-unified-*` response headers** on every `/v1/messages` call, not a separate endpoint. See [service/docs/usage-endpoint.md](service/docs/usage-endpoint.md).
 - The service caches upstream responses for 60 s, so the ESP32's 10 s polls don't translate to 10 s upstream polls.
-- All Wi-Fi creds and the service host live in `firmware/include/secrets.h` (gitignored). The OAuth credential blob lives in `service/.secrets/credentials.json` (also gitignored).
+- All Wi-Fi creds and the service host live in `firmware/include/secrets.h` (gitignored). The OAuth credential blob lives in `service/.secrets/credentials.json` (also gitignored). The access token expires every few hours; see [service/README.md#token-expiry](service/README.md#token-expiry) for how to refresh it.
 - Outbound HTTPS goes through Netskope; the corporate cert bundle is mounted into the Docker container.
 - The webpage and service run as **separate compose stacks** on a manually-created external network (`esp32-monitor-shared`). The webpage's nginx reverse-proxies `/api/*` to the service container by name, so the browser never deals with CORS.
 

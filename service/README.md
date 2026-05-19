@@ -28,7 +28,7 @@ See [docs/usage-endpoint.md](docs/usage-endpoint.md) for how the upstream call w
    ```
    bin/refresh-token.sh
    ```
-   Writes `service/.secrets/credentials.json` (gitignored, mode 600). Re-run whenever `claude` rotates the token (the service logs a hint when this happens).
+   Writes `service/.secrets/credentials.json` (gitignored, mode 600). See [Token expiry](#token-expiry) for how to keep it fresh.
 
 ## Run locally (host)
 
@@ -50,6 +50,21 @@ The compose file mounts:
 - `/usr/local/share/netskope-cert-bundle.pem` → `/etc/ssl/certs/netskope-ca.pem` (ro, picked up via `NODE_EXTRA_CA_CERTS`)
 
 Without the cert mount, outbound HTTPS to `api.anthropic.com` fails with a self-signed-cert error (Netskope intercepts).
+
+## Token expiry
+
+The OAuth access token in `credentials.json` has a short lifetime (the `expiresAt` field, unix ms — typically a few hours after issue). When it expires, every upstream call returns 401 and the service starts logging `upstream refresh failed` with the Anthropic error body. `/api/usage` keeps responding 200 with `stale: true` from the last good cache, and the ESP32 shows the persistent red bar at the top of the screen.
+
+There is no automatic refresh today. To recover:
+
+1. **Open the Claude Code app or run `claude` once on the host.** This is what actually mints a new access token from the stored refresh token and writes it back to the macOS Keychain. Without this step, the next step just re-copies the same expired blob.
+2. **Re-run the extraction script:**
+   ```
+   bin/refresh-token.sh
+   ```
+   The service re-reads `credentials.json` on every cache miss, so no restart is needed — the next `/api/usage` request will succeed.
+
+In-process refresh (skipping the `claude` step entirely by calling Anthropic's OAuth refresh endpoint directly) is a planned follow-up.
 
 ## Cost note
 
