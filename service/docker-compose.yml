@@ -14,7 +14,7 @@ services:
       UPSTREAM_CACHE_TTL_MS: "60000"
       LOG_LEVEL: info
     volumes:
-      - ./.secrets/credentials.json:/run/secrets/credentials.json:rw
+      - ./.secrets:/run/secrets:rw
       - /usr/local/share/netskope-cert-bundle.pem:/etc/ssl/certs/netskope-ca.pem:ro
     networks: [shared]
 

@@ -46,7 +46,7 @@ curl localhost:8787/api/usage
 ```
 
 The compose file mounts:
-- `./.secrets/credentials.json` → `/run/secrets/credentials.json` (rw, so the service can rewrite on token refresh)
+- `./.secrets/` → `/run/secrets/` (rw — directory, not single file, so that atomic `mv` in `bin/refresh-token.sh` is visible to the container without a restart)
 - `/usr/local/share/netskope-cert-bundle.pem` → `/etc/ssl/certs/netskope-ca.pem` (ro, picked up via `NODE_EXTRA_CA_CERTS`)
 
 Without the cert mount, outbound HTTPS to `api.anthropic.com` fails with a self-signed-cert error (Netskope intercepts).
