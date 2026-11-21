@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <esp_sleep.h>
 
+#include "battery.h"
 #include "display.h"
 #include "net.h"
 #include "secrets.h"
@@ -44,6 +45,14 @@ void doFetch() {
   }
 }
 
+// Battery is sampled before the radio comes up (TX bursts sag the cell) and
+// drawn afterwards, because a splash screen during the fetch clears it.
+void poll() {
+  const BatteryReading batt = battery::read();
+  doFetch();
+  display::drawBattery(batt.percent, batt.charging);
+}
+
 // The Arduino core ships without CONFIG_PM_ENABLE, so delay() never lets the
 // chip sleep. Light sleep keeps RAM, GPIO levels and the LCD contents, and
 // cuts the idle draw from tens of mA to under 1 mA.
@@ -61,17 +70,18 @@ void setup() {
   delay(200);
   Serial.println("\n[boot] esp32-token-monitor");
 
+  battery::begin();
   display::begin();
   display::drawSplash("fetching", "usage");
 
   lastFetchMs = millis();
-  doFetch();
+  poll();
 }
 
 void loop() {
   if (millis() - lastFetchMs >= POLL_INTERVAL_MS) {
     lastFetchMs = millis();
-    doFetch();
+    poll();
   }
 
   const unsigned long elapsed = millis() - lastFetchMs;

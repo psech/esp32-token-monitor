@@ -10,6 +10,10 @@ void begin();
 // percentages are clamped to 0..100.
 void drawBars(int sessionPct, int weekPct);
 
+// Battery row above the countdown bar: "NN%" plus a filled icon while on
+// battery, a green bolt and "Charging" while on USB.
+void drawBattery(int percent, bool charging);
+
 // Redraw the 1px countdown bar at the bottom edge.
 // progress is 0..1 (fraction of poll interval elapsed).
 void drawCountdown(float progress);

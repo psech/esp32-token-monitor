@@ -1,6 +1,6 @@
 # esp32-token-monitor — firmware
 
-PlatformIO project for the **TTGO T-Display ESP32** (240×135 ST7789 LCD). Polls the laptop service every `POLL_INTERVAL_MS` and draws two progress bars + a 1 px countdown row at the bottom. Built to run off a single-cell LiPo; see [Battery](#battery).
+PlatformIO project for the **TTGO T-Display ESP32** (240×135 ST7789 LCD). Polls the laptop service every `POLL_INTERVAL_MS` and draws two progress bars, a battery indicator and a 1 px countdown row at the bottom. Built to run off a single-cell LiPo; see [Battery](#battery).
 
 ## Layout
 
@@ -11,6 +11,8 @@ PlatformIO project for the **TTGO T-Display ESP32** (240×135 ST7789 LCD). Polls
 │                                              │
 │ Current week (all models)                NN% │
 │ ████████████████████████░░░░░░░░░░░░░░░░░░░░ │
+│                                              │
+│                                   87% [███ ]▪│ ← battery
 │ █████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ ← 1px countdown
 └──────────────────────────────────────────────┘
 ```
@@ -18,6 +20,11 @@ PlatformIO project for the **TTGO T-Display ESP32** (240×135 ST7789 LCD). Polls
 A red 1 px line appears at the **top** when the most recent fetch failed or returned `stale: true`. It clears on the next successful fresh response.
 
 Bar fill colour shifts based on percentage: magenta → amber at 75% → red at 90%.
+
+The battery row shows one of two states:
+
+- **On battery (discharging):** the charge percentage and a battery icon filled to match. Both are grey, turning amber below 20% and red below 10%.
+- **On USB (charging):** a green lightning bolt and `Charging`.
 
 ## One-time setup
 
@@ -66,6 +73,14 @@ How the firmware saves power:
 - **Wi-Fi off between polls.** Each poll powers up Wi-Fi, associates, makes the GET and shuts Wi-Fi down again. That takes about 0.4 s per poll measured on serial (`[net] radio on Nms`), and about 3 s for the first poll after boot. A failed connect gives up after 10 s instead of blocking.
 - **Dimmable backlight.** The backlight PWM is clocked from the RTC 8 MHz oscillator, which keeps running during light sleep. The default APB clock would stop and leave the backlight stuck fully on or off.
 
+How the battery indicator works ([src/battery.cpp](src/battery.cpp)):
+
+- **Where it reads:** the board's supply rail reaches GPIO34 through a 100k/100k divider. That divider only conducts while GPIO14 is high, so the firmware switches it on just for the reading.
+- **When it reads:** once per poll, before Wi-Fi powers up, because transmit bursts briefly pull the voltage down. It averages 32 samples.
+- **Charging detection:** with USB plugged in, the rail reads about 4.9 V instead of the cell voltage. No LiPo goes above 4.2 V, so any reading over 4.5 V means USB, which the display shows as charging. The charger chip's status pin only drives the blue LED and isn't wired to the ESP32, so the voltage is the only signal available.
+- **Limits of that approach:** the cell's own charge level can't be read while USB is connected. A fully charged battery on USB still shows `Charging`, and so does a board running on USB with no battery fitted.
+- **Percentage:** voltage is mapped onto a typical LiPo discharge curve. 0% is set at 3.4 V, not the cell's 3.0 V minimum, because the board's 3.3 V regulator stops working below about 3.4 V.
+
 Two details in [src/net.cpp](src/net.cpp) are there for this cycle, so don't remove them:
 
 - Connection is judged by the IP address as well as `WiFi.status()`. Turning Wi-Fi off and then sleeping leaves a stale `WL_CONNECTED` from the previous session.
@@ -87,5 +102,6 @@ Polling every 10 s instead of 60 s adds roughly 4 mA, about 3 days less at the d
 - [platformio.ini](platformio.ini) — board, framework, TFT_eSPI pin config (no manual `User_Setup.h` editing)
 - [src/main.cpp](src/main.cpp) — setup + loop, fetch scheduling, countdown ticking, light sleep between ticks
 - [src/net.cpp](src/net.cpp) — per-poll Wi-Fi up/down + HTTP GET + ArduinoJson parse (filtered)
-- [src/display.cpp](src/display.cpp) — bar/countdown/error rendering, layout constants, backlight PWM
+- [src/display.cpp](src/display.cpp) — bar/battery/countdown/error rendering, layout constants, backlight PWM
+- [src/battery.cpp](src/battery.cpp) — battery voltage sampling, LiPo voltage-to-percent curve, USB (charging) detection
 - [include/secrets.h.example](include/secrets.h.example) — template for `secrets.h`
