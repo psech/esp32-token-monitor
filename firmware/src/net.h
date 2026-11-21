@@ -10,11 +10,9 @@ struct UsageSnapshot {
 
 namespace net {
 
-void connectWiFi();   // blocks until connected (with retries)
-bool isOnline();
-
-// Performs HTTP GET to /api/usage on the configured host:port and parses
-// the JSON. Returns true on success and fills `out`. Logs to Serial on failure.
+// Powers the radio up, connects, GETs /api/usage, parses it and powers the
+// radio back down. The radio is off between calls to save battery. Returns
+// true on success and fills `out`. Logs to Serial on failure.
 bool fetchUsage(UsageSnapshot& out);
 
 } // namespace net

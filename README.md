@@ -48,7 +48,8 @@ Or run each step manually — see [bin/start.sh](bin/start.sh) / [bin/stop.sh](b
 ## Design notes
 
 - Rate-limit data lives in **`anthropic-ratelimit-unified-*` response headers** on every `/v1/messages` call, not a separate endpoint. See [service/docs/usage-endpoint.md](service/docs/usage-endpoint.md).
-- The service caches upstream responses for 60 s, so the ESP32's 10 s polls don't translate to 10 s upstream polls.
+- The service caches upstream responses for 60 s, and the ESP32 polls once every 60 s to match.
+- The ESP32 is built to run off a LiPo battery. It light-sleeps between screen updates and keeps Wi-Fi off between polls, which gives roughly 10 days on 3000 mAh at default brightness. See [firmware/README.md#battery](firmware/README.md#battery).
 - All Wi-Fi creds and the service host live in `firmware/include/secrets.h` (gitignored). The OAuth credential blob lives in `service/.secrets/credentials.json` (also gitignored). The access token expires every few hours; see [service/README.md#token-expiry](service/README.md#token-expiry) for how to refresh it.
 - Outbound HTTPS goes through Netskope; the corporate cert bundle is mounted into the Docker container.
 - The webpage and service run as **separate compose stacks** on a manually-created external network (`esp32-monitor-shared`). The webpage's nginx reverse-proxies `/api/*` to the service container by name, so the browser never deals with CORS.

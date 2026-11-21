@@ -2,6 +2,14 @@
 
 #include <Arduino.h>
 #include <TFT_eSPI.h>
+#include <driver/ledc.h>
+#include <esp_sleep.h>
+
+#include "secrets.h"
+
+#ifndef BACKLIGHT_PERCENT
+#define BACKLIGHT_PERCENT 30
+#endif
 
 namespace {
 
@@ -63,6 +71,33 @@ void drawBar(int y, int pct) {
   tft.fillRect(PAD_X + filled, y, BAR_W - filled, BAR_H, COLOR_TRACK);
 }
 
+// The backlight is the largest constant load on battery. LEDC's default APB
+// clock is gated in light sleep, which would freeze the pin at whatever level
+// it happened to be; the RTC 8 MHz oscillator keeps PWM running through sleep.
+void initBacklight() {
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC8M, ESP_PD_OPTION_ON);
+
+  ledc_timer_config_t timer = {};
+  timer.speed_mode      = LEDC_LOW_SPEED_MODE;
+  timer.duty_resolution = LEDC_TIMER_8_BIT;
+  timer.timer_num       = LEDC_TIMER_0;
+  timer.freq_hz         = 5000;
+  timer.clk_cfg         = LEDC_USE_RTC8M_CLK;
+  ledc_timer_config(&timer);
+
+  int pct = BACKLIGHT_PERCENT;
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+
+  ledc_channel_config_t channel = {};
+  channel.gpio_num   = TFT_BL;
+  channel.speed_mode = LEDC_LOW_SPEED_MODE;
+  channel.channel    = LEDC_CHANNEL_0;
+  channel.timer_sel  = LEDC_TIMER_0;
+  channel.duty       = (255 * pct) / 100;
+  ledc_channel_config(&channel);
+}
+
 } // namespace
 
 namespace display {
@@ -71,6 +106,7 @@ void begin() {
   tft.init();
   tft.setRotation(3);
   tft.fillScreen(COLOR_BG);
+  initBacklight();
 }
 
 void drawBars(int sessionPct, int weekPct) {

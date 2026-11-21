@@ -65,9 +65,13 @@ Outbound HTTPS goes through corporate TLS interception. The Netskope cert bundle
 ## Cache + polling
 
 - Service caches upstream responses for `UPSTREAM_CACHE_TTL_MS` (default 60 s). Don't drop this below ~10 s without thinking about token cost.
-- ESP32 polls every `POLL_INTERVAL_MS` from `firmware/include/secrets.h` (default 10 s).
-- Worst-case display lag = service cache + poll interval ≈ 70 s. This is by design.
+- ESP32 polls every `POLL_INTERVAL_MS` from `firmware/include/secrets.h` (default 60 s, matching the cache TTL).
+- Worst-case display lag = service cache + poll interval ≈ 120 s. This is by design.
 - The 1 px countdown bar at the bottom of the LCD derives its step from `POLL_INTERVAL_MS / SCREEN_W` — change one and the other adjusts.
+
+## Battery operation
+
+The firmware is built to run off a LiPo. Between countdown ticks it light-sleeps (`esp_light_sleep_start()`), and it powers Wi-Fi up only for each poll. Don't bring back an always-connected Wi-Fi session, `delay()`-based idling or a 240 MHz CPU clock; each one costs days of runtime. The backlight PWM must stay on the RTC 8 MHz clock, or it freezes during light sleep. See [firmware/README.md#battery](firmware/README.md#battery).
 
 ## On-device error signal
 
