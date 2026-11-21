@@ -18,6 +18,9 @@ webpage/node_modules/
 webpage/dist/
 webpage/*.log
 
+# UniFi MCP server audit trail (written to its cwd when Claude Code launches it here)
+audit.log
+
 # Editor / OS
 .DS_Store
 .vscode/
