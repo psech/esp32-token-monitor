@@ -29,16 +29,29 @@ constexpr int SESSION_BAR_Y = 32;
 constexpr int WEEK_LBL_Y    = 60;
 constexpr int WEEK_BAR_Y    = 78;
 
-// Battery row, right-aligned: "NN%" text then a 22x11 icon with a 2x5 nub.
-constexpr int BATT_ROW_Y    = 108;
-constexpr int BATT_ROW_H    = 18;
+// Status row: Wi-Fi in the left half, battery in the right half.
+constexpr int STATUS_ROW_Y  = 108;
+constexpr int STATUS_ROW_H  = 18;
+constexpr int STATUS_HALF_W = BAR_W / 2;
+
+// Battery, right-aligned: "NN%" text then a 22x11 icon with a 2x5 nub.
 constexpr int BATT_ICON_W   = 22;
 constexpr int BATT_ICON_H   = 11;
 constexpr int BATT_NUB_W    = 2;
 constexpr int BATT_NUB_H    = 5;
 constexpr int BATT_ICON_X   = PAD_X + BAR_W - BATT_NUB_W - BATT_ICON_W;
-constexpr int BATT_ICON_Y   = BATT_ROW_Y + 3;
+constexpr int BATT_ICON_Y   = STATUS_ROW_Y + 3;
 constexpr int BATT_TEXT_GAP = 6;
+
+// Wi-Fi, left-aligned: four rising signal bars then "-NN dBm" text. Bars share
+// the battery icon's bottom edge so the row reads as one line.
+constexpr int WIFI_BARS     = 4;
+constexpr int WIFI_BAR_W    = 3;
+constexpr int WIFI_BAR_GAP  = 2;
+constexpr int WIFI_BAR_STEP = 3;
+constexpr int WIFI_BOTTOM_Y = BATT_ICON_Y + BATT_ICON_H - 1;
+constexpr int WIFI_ICON_W   = WIFI_BARS * WIFI_BAR_W + (WIFI_BARS - 1) * WIFI_BAR_GAP;
+constexpr int WIFI_TEXT_GAP = 6;
 
 constexpr int COUNTDOWN_Y   = SCREEN_H - 1;   // 134
 constexpr int ERROR_Y       = 0;
@@ -125,7 +138,7 @@ void drawBars(int sessionPct, int weekPct) {
   // Clear everything between the top error indicator and the battery row —
   // wipes any residual splash text and avoids overlap when label/bar Y
   // positions don't perfectly align.
-  tft.fillRect(0, 1, SCREEN_W, BATT_ROW_Y - 1, COLOR_BG);
+  tft.fillRect(0, 1, SCREEN_W, STATUS_ROW_Y - 1, COLOR_BG);
 
   drawLabelAndPercent(SESSION_LBL_Y, "Current session",        sessionPct);
   drawBar(SESSION_BAR_Y, sessionPct);
@@ -138,7 +151,7 @@ void drawBattery(int percent, bool charging) {
   if (percent < 0) percent = 0;
   if (percent > 100) percent = 100;
 
-  tft.fillRect(PAD_X, BATT_ROW_Y, BAR_W, BATT_ROW_H, COLOR_BG);
+  tft.fillRect(PAD_X + STATUS_HALF_W, STATUS_ROW_Y, BAR_W - STATUS_HALF_W, STATUS_ROW_H, COLOR_BG);
 
   uint16_t color = COLOR_LABEL;
   if (charging)          color = COLOR_CHARGING;
@@ -169,7 +182,36 @@ void drawBattery(int percent, bool charging) {
   tft.setTextFont(2);
   tft.setTextColor(color, COLOR_BG);
   tft.setTextDatum(TR_DATUM);
-  tft.drawString(buf, x - BATT_TEXT_GAP, BATT_ROW_Y);
+  tft.drawString(buf, x - BATT_TEXT_GAP, STATUS_ROW_Y);
+}
+
+void drawWifi(int rssi) {
+  tft.fillRect(PAD_X, STATUS_ROW_Y, STATUS_HALF_W, STATUS_ROW_H, COLOR_BG);
+
+  const bool connected = rssi != 0;
+  int lit = 0;
+  if (connected) {
+    if      (rssi >= -55) lit = 4;
+    else if (rssi >= -65) lit = 3;
+    else if (rssi >= -75) lit = 2;
+    else                  lit = 1;
+  }
+
+  for (int i = 0; i < WIFI_BARS; i++) {
+    const int h = WIFI_BAR_STEP * (i + 1);
+    const int x = PAD_X + i * (WIFI_BAR_W + WIFI_BAR_GAP);
+    const int y = WIFI_BOTTOM_Y - h + 1;
+    if (connected) tft.fillRect(x, y, WIFI_BAR_W, h, i < lit ? COLOR_LABEL : COLOR_TRACK);
+    else           tft.drawRect(x, y, WIFI_BAR_W, h, COLOR_ERROR);
+  }
+
+  char buf[16];
+  if (connected) snprintf(buf, sizeof(buf), "%d dBm", rssi);
+  else           snprintf(buf, sizeof(buf), "No Wi-Fi");
+  tft.setTextFont(2);
+  tft.setTextColor(connected ? COLOR_LABEL : COLOR_ERROR, COLOR_BG);
+  tft.setTextDatum(TL_DATUM);
+  tft.drawString(buf, PAD_X + WIFI_ICON_W + WIFI_TEXT_GAP, STATUS_ROW_Y);
 }
 
 void drawCountdown(float progress) {

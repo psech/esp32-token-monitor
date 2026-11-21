@@ -51,6 +51,7 @@ void poll() {
   const BatteryReading batt = battery::read();
   doFetch();
   display::drawBattery(batt.percent, batt.charging);
+  display::drawWifi(net::lastRssi());
 }
 
 // The Arduino core ships without CONFIG_PM_ENABLE, so delay() never lets the

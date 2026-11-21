@@ -19,7 +19,7 @@ A tiny dedicated dashboard that mirrors Claude Code's `/usage` panel — "Curren
 ## Repo layout
 
 - [service/](service/) — Node 24 + Fastify, Dockerised. Reads the OAuth token from your macOS Keychain (via a helper script), makes a tiny `/v1/messages` call, and exposes `/api/usage` on the LAN.
-- [firmware/](firmware/) — PlatformIO project for the TTGO T-Display. Polls the service, renders two progress bars, a battery/charging indicator and a 1 px countdown row.
+- [firmware/](firmware/) — PlatformIO project for the TTGO T-Display. Polls the service, renders two progress bars, a Wi-Fi signal and battery/charging status row, and a 1 px countdown row.
 - [webpage/](webpage/) — Vue 3 + Vite + Tailwind v4 dashboard at `http://localhost:8080`, mirrors the device with two bars, a radar countdown, and dark/light theme.
 
 See each folder's README for details.

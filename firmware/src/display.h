@@ -14,6 +14,10 @@ void drawBars(int sessionPct, int weekPct);
 // battery, a green bolt and "Charging" while on USB.
 void drawBattery(int percent, bool charging);
 
+// Left half of the status row: signal bars and "-NN dBm" from the last poll's
+// connect, or red outlined bars and "No Wi-Fi" when rssi is 0 (connect failed).
+void drawWifi(int rssi);
+
 // Redraw the 1px countdown bar at the bottom edge.
 // progress is 0..1 (fraction of poll interval elapsed).
 void drawCountdown(float progress);

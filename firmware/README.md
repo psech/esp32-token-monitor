@@ -1,6 +1,6 @@
 # esp32-token-monitor — firmware
 
-PlatformIO project for the **TTGO T-Display ESP32** (240×135 ST7789 LCD). Polls the laptop service every `POLL_INTERVAL_MS` and draws two progress bars, a battery indicator and a 1 px countdown row at the bottom. Built to run off a single-cell LiPo; see [Battery](#battery).
+PlatformIO project for the **TTGO T-Display ESP32** (240×135 ST7789 LCD). Polls the laptop service every `POLL_INTERVAL_MS` and draws two progress bars, a Wi-Fi + battery status row and a 1 px countdown row at the bottom. Built to run off a single-cell LiPo; see [Battery](#battery).
 
 ## Layout
 
@@ -12,7 +12,7 @@ PlatformIO project for the **TTGO T-Display ESP32** (240×135 ST7789 LCD). Polls
 │ Current week (all models)                NN% │
 │ ████████████████████████░░░░░░░░░░░░░░░░░░░░ │
 │                                              │
-│                                   87% [███ ]▪│ ← battery
+│ ▂▄▆█ -62 dBm                      87% [███ ]▪│ ← Wi-Fi / battery
 │ █████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ ← 1px countdown
 └──────────────────────────────────────────────┘
 ```
@@ -21,7 +21,20 @@ A red 1 px line appears at the **top** when the most recent fetch failed or retu
 
 Bar fill colour shifts based on percentage: magenta → amber at 75% → red at 90%.
 
-The battery row shows one of two states:
+The status row has Wi-Fi on the left and battery on the right.
+
+**Wi-Fi.** Four signal bars and the signal strength in dBm, measured when the last poll connected. The radio is off between polls, so that's the freshest reading there is.
+
+| Signal | Bars |
+| --- | --- |
+| -55 dBm or stronger | 4 |
+| -56 to -65 dBm | 3 |
+| -66 to -75 dBm | 2 |
+| weaker than -75 dBm | 1 |
+
+If the connect fails, the bars turn into red outlines and the text reads `No Wi-Fi`. This tells you which part failed when the red top bar is lit: red Wi-Fi bars mean the board couldn't join the network; normal Wi-Fi bars with the red top bar mean the service failed or returned stale data.
+
+**Battery** shows one of two states:
 
 - **On battery (discharging):** the charge percentage and a battery icon filled to match. Both are grey, turning amber below 20% and red below 10%.
 - **On USB (charging):** a green lightning bolt and `Charging`.
@@ -101,7 +114,7 @@ Polling every 10 s instead of 60 s adds roughly 4 mA, about 3 days less at the d
 
 - [platformio.ini](platformio.ini) — board, framework, TFT_eSPI pin config (no manual `User_Setup.h` editing)
 - [src/main.cpp](src/main.cpp) — setup + loop, fetch scheduling, countdown ticking, light sleep between ticks
-- [src/net.cpp](src/net.cpp) — per-poll Wi-Fi up/down + HTTP GET + ArduinoJson parse (filtered)
-- [src/display.cpp](src/display.cpp) — bar/battery/countdown/error rendering, layout constants, backlight PWM
+- [src/net.cpp](src/net.cpp) — per-poll Wi-Fi up/down + HTTP GET + ArduinoJson parse (filtered), RSSI of the last connect
+- [src/display.cpp](src/display.cpp) — bar/Wi-Fi/battery/countdown/error rendering, layout constants, backlight PWM
 - [src/battery.cpp](src/battery.cpp) — battery voltage sampling, LiPo voltage-to-percent curve, USB (charging) detection
 - [include/secrets.h.example](include/secrets.h.example) — template for `secrets.h`

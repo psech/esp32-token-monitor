@@ -13,6 +13,8 @@ namespace {
 
 constexpr unsigned long CONNECT_TIMEOUT_MS = 10000;
 
+int rssi = 0;
+
 // status() alone can't be trusted here: it is updated from async events, and
 // tearing the radio down then light-sleeping leaves the previous session's
 // WL_CONNECTED in place. The interface IP is cleared on teardown, so it is reliable.
@@ -22,6 +24,7 @@ bool isConnected() {
 
 bool connect() {
   const unsigned long start = millis();
+  rssi = 0;
   // Not persistent: otherwise every begin() rewrites the Wi-Fi config to flash.
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false);
@@ -41,9 +44,10 @@ bool connect() {
   // On this LAN the first packets sent straight after DHCP completes are often
   // dropped, costing a 3 s TCP retransmit; a short pause measured cheaper.
   delay(100);
+  rssi = WiFi.RSSI();
 
   Serial.printf("[wifi] connected in %lums, ip=%s rssi=%d\n",
-                millis() - start, WiFi.localIP().toString().c_str(), WiFi.RSSI());
+                millis() - start, WiFi.localIP().toString().c_str(), rssi);
   return true;
 }
 
@@ -102,6 +106,10 @@ bool fetchUsage(UsageSnapshot& out) {
   radioOff();
   Serial.printf("[net] radio on %lums\n", millis() - start);
   return ok;
+}
+
+int lastRssi() {
+  return rssi;
 }
 
 } // namespace net
