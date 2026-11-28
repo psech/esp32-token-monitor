@@ -7,19 +7,19 @@ A tiny dedicated dashboard that mirrors Claude Code's `/usage` panel — "Curren
 ┌─────────────────────┐       ┌─────────────────────────┐       ┌──────────────────┐
 │  TTGO T-Display     │  HTTP │  Node service in Docker │  HTTP │  Vue webpage     │
 │  (Wi-Fi, 240×135)   │  ◄──  │  on the laptop          │  ──►  │  localhost:8080  │
-└─────────────────────┘       └────────────┬────────────┘       └──────────────────┘
-                                           │ HTTPS
-                                           ▼
-                              ┌──────────────────────────┐
-                              │  api.anthropic.com       │
-                              │  (rate-limit headers)    │
-                              └──────────────────────────┘
+└──────────┬──────────┘       └────────────┬────────────┘       └──────────────────┘
+           │ MQTT (optional)               │ HTTPS
+           ▼                               ▼
+┌─────────────────────┐       ┌──────────────────────────┐
+│  Home Assistant     │       │  api.anthropic.com       │
+│  (Mosquitto broker) │       │  (rate-limit headers)    │
+└─────────────────────┘       └──────────────────────────┘
 ```
 
 ## Repo layout
 
 - [service/](service/) — Node 24 + Fastify, Dockerised. Reads the OAuth token from your macOS Keychain (via a helper script), makes a tiny `/v1/messages` call, and exposes `/api/usage` on the LAN.
-- [firmware/](firmware/) — PlatformIO project for the TTGO T-Display. Polls the service, renders two progress bars, a Wi-Fi signal and battery/charging status row, and a 1 px countdown row.
+- [firmware/](firmware/) — PlatformIO project for the TTGO T-Display. Polls the service, renders two progress bars, a Wi-Fi signal and battery/charging status row, and a 1 px countdown row. Optionally publishes usage and battery to Home Assistant over MQTT discovery.
 - [webpage/](webpage/) — Vue 3 + Vite + Tailwind v4 dashboard at `http://localhost:8080`, mirrors the device with two bars, a radar countdown, and dark/light theme.
 
 See each folder's README for details.
@@ -49,8 +49,9 @@ Or run each step manually — see [bin/start.sh](bin/start.sh) / [bin/stop.sh](b
 
 - Rate-limit data lives in **`anthropic-ratelimit-unified-*` response headers** on every `/v1/messages` call, not a separate endpoint. See [service/docs/usage-endpoint.md](service/docs/usage-endpoint.md).
 - The service caches upstream responses for 60 s, and the ESP32 polls once every 60 s to match.
-- The ESP32 is built to run off a LiPo battery. It light-sleeps between screen updates and keeps Wi-Fi off between polls, which gives roughly 10 days on 3000 mAh at default brightness. See [firmware/README.md#battery](firmware/README.md#battery).
-- All Wi-Fi creds and the service host live in `firmware/include/secrets.h` (gitignored). The OAuth credential blob lives in `service/.secrets/credentials.json` (also gitignored). The access token expires every few hours; see [service/README.md#token-expiry](service/README.md#token-expiry) for how to refresh it.
+- The ESP32 is built to run off a LiPo battery. It light-sleeps between screen updates and keeps Wi-Fi off between polls, which gives roughly 10 days on 3000 mAh at default brightness (a little less with Home Assistant reporting on). See [firmware/README.md#battery](firmware/README.md#battery).
+- The ESP32 can also report usage, battery and Wi-Fi signal to Home Assistant. It publishes over MQTT in the same short radio session as each poll, using MQTT discovery so the entities appear on their own. See [firmware/README.md#home-assistant](firmware/README.md#home-assistant).
+- All Wi-Fi creds, the service host and the MQTT broker credentials live in `firmware/include/secrets.h` (gitignored). The OAuth credential blob lives in `service/.secrets/credentials.json` (also gitignored). The access token expires every few hours; see [service/README.md#token-expiry](service/README.md#token-expiry) for how to refresh it.
 - Outbound HTTPS goes through Netskope; the corporate cert bundle is mounted into the Docker container.
 - The webpage and service run as **separate compose stacks** on a manually-created external network (`esp32-monitor-shared`). The webpage's nginx reverse-proxies `/api/*` to the service container by name, so the browser never deals with CORS.
 

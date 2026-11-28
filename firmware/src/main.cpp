@@ -3,6 +3,7 @@
 
 #include "battery.h"
 #include "display.h"
+#include "ha.h"
 #include "net.h"
 #include "secrets.h"
 
@@ -18,9 +19,8 @@ bool          errorState    = false;
 constexpr unsigned long COUNTDOWN_STEP_MS =
     POLL_INTERVAL_MS >= 240UL ? POLL_INTERVAL_MS / 240UL : 1UL;
 
-void doFetch() {
-  UsageSnapshot snap;
-  if (!net::fetchUsage(snap)) {
+void showUsage(bool ok, const UsageSnapshot& snap) {
+  if (!ok) {
     errorState = true;
     if (!haveData) display::drawSplash("offline", "retrying");
     display::setErrorIndicator(true);
@@ -47,9 +47,18 @@ void doFetch() {
 
 // Battery is sampled before the radio comes up (TX bursts sag the cell) and
 // drawn afterwards, because a splash screen during the fetch clears it.
+// Home Assistant gets the battery even when the usage fetch fails, so it
+// shares the radio session rather than depending on the fetch.
 void poll() {
   const BatteryReading batt = battery::read();
-  doFetch();
+  UsageSnapshot snap{};
+  bool ok = false;
+  if (net::up()) {
+    ok = net::fetchUsage(snap);
+    ha::publish(batt, net::lastRssi(), ok ? &snap : nullptr);
+  }
+  net::down();
+  showUsage(ok, snap);
   display::drawBattery(batt.percent, batt.charging);
   display::drawWifi(net::lastRssi());
 }

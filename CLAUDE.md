@@ -4,7 +4,7 @@ Three-folder project: a Node service on the laptop, ESP32 firmware that polls it
 
 ```
 service/    Node 24 + Fastify, Dockerised. Reads OAuth token from macOS Keychain, calls api.anthropic.com, exposes /api/usage on port 8787.
-firmware/   PlatformIO project for TTGO T-Display ESP32. Polls the service, renders two progress bars.
+firmware/   PlatformIO project for TTGO T-Display ESP32. Polls the service, renders two progress bars, optionally publishes to Home Assistant over MQTT.
 webpage/    Vue 3 + Vite + Tailwind v4 SPA, served by nginx in its own compose stack at localhost:8080. Same /api/usage data as the device.
 ```
 
@@ -48,7 +48,7 @@ TFT_eSPI pin config is via `build_flags` in `platformio.ini`, **not** by editing
 
 | Path | What | Source |
 | --- | --- | --- |
-| `firmware/include/secrets.h` | Wi-Fi creds + service host | `cp` from `secrets.h.example`, hand-edited |
+| `firmware/include/secrets.h` | Wi-Fi creds + service host + MQTT broker creds | `cp` from `secrets.h.example`, hand-edited |
 | `service/.secrets/credentials.json` | Claude Code OAuth blob | `service/bin/refresh-token.sh` (pulls from keychain) |
 | `service/.env` | Local dev overrides | `cp` from `.env.example` if needed |
 
@@ -73,6 +73,8 @@ Outbound HTTPS goes through corporate TLS interception. The Netskope cert bundle
 
 The firmware is built to run off a LiPo. Between countdown ticks it light-sleeps (`esp_light_sleep_start()`), and it powers Wi-Fi up only for each poll. Don't bring back an always-connected Wi-Fi session, `delay()`-based idling or a 240 MHz CPU clock; each one costs days of runtime. The backlight PWM must stay on the RTC 8 MHz clock, or it freezes during light sleep. See [firmware/README.md#battery](firmware/README.md#battery).
 
+The Home Assistant MQTT publish shares that per-poll radio session. It waits for the broker to close the connection after `DISCONNECT` before the radio goes off. Don't replace that with `mqtt.disconnect()`: it returns while bytes are still queued in lwIP, and powering the radio off then discards them.
+
 ## On-device error signal
 
 Persistent red 1 px bar at the **top** of the LCD = last fetch failed OR service returned `stale: true`. It only clears on the next fresh successful response. Don't make it transient — the user explicitly asked for a sticky indicator.
@@ -93,13 +95,13 @@ cd firmware
 pio run -t upload && pio device monitor
 ```
 
-Look for `[wifi] connected` then `[usage] session=N% week=N% stale=0` lines.
+Look for `[wifi] connected` then `[usage] session=N% week=N% stale=0` lines, and `[mqtt] published ok` if `MQTT_HOST` is set.
 
 ## House style
 
 - TypeScript strict mode is on; keep it that way.
 - No comments explaining what code does — only why if it's non-obvious. Existing modules follow this.
-- Don't add libraries casually. Service has Fastify only; firmware has TFT_eSPI + ArduinoJson only.
+- Don't add libraries casually. Service has Fastify only; firmware has TFT_eSPI + ArduinoJson + PubSubClient (Home Assistant MQTT) only.
 - Don't add a "framework" abstraction for a second device or a second API consumer — there is one device and one consumer; YAGNI.
 
 ## Keep READMEs in sync

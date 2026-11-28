@@ -14,6 +14,7 @@ namespace {
 constexpr unsigned long CONNECT_TIMEOUT_MS = 10000;
 
 int rssi = 0;
+unsigned long upAtMs = 0;
 
 // status() alone can't be trusted here: it is updated from async events, and
 // tearing the radio down then light-sleeping leaves the previous session's
@@ -24,7 +25,6 @@ bool isConnected() {
 
 bool connect() {
   const unsigned long start = millis();
-  rssi = 0;
   // Not persistent: otherwise every begin() rewrites the Wi-Fi config to flash.
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false);
@@ -51,10 +51,6 @@ bool connect() {
   return true;
 }
 
-void radioOff() {
-  WiFi.disconnect(true);
-}
-
 bool get(UsageSnapshot& out) {
   HTTPClient http;
   char url[96];
@@ -77,9 +73,11 @@ bool get(UsageSnapshot& out) {
   }
 
   JsonDocument filter;
-  filter["session"]["percent"] = true;
-  filter["week"]["percent"]    = true;
-  filter["stale"]              = true;
+  filter["session"]["percent"]  = true;
+  filter["session"]["resetsAt"] = true;
+  filter["week"]["percent"]     = true;
+  filter["week"]["resetsAt"]    = true;
+  filter["stale"]               = true;
 
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, http.getStream(),
@@ -93,19 +91,28 @@ bool get(UsageSnapshot& out) {
   out.sessionPct = doc["session"]["percent"] | 0;
   out.weekPct    = doc["week"]["percent"]    | 0;
   out.stale      = doc["stale"]              | false;
+  strlcpy(out.sessionResetsAt, doc["session"]["resetsAt"] | "", sizeof(out.sessionResetsAt));
+  strlcpy(out.weekResetsAt,    doc["week"]["resetsAt"]    | "", sizeof(out.weekResetsAt));
   return true;
 }
 
 } // namespace
 
+bool up() {
+  upAtMs = millis();
+  rssi   = 0;
+  return connect();
+}
+
+void down() {
+  WiFi.disconnect(true);
+  Serial.printf("[net] radio on %lums\n", millis() - upAtMs);
+}
+
 bool fetchUsage(UsageSnapshot& out) {
-  const unsigned long start = millis();
   // The first request right after association is occasionally lost; one
   // retry while the radio is already up is far cheaper than a failed poll.
-  const bool ok = connect() && (get(out) || get(out));
-  radioOff();
-  Serial.printf("[net] radio on %lums\n", millis() - start);
-  return ok;
+  return get(out) || get(out);
 }
 
 int lastRssi() {
